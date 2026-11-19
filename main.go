@@ -1,11 +1,12 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
-	"strconv"
 	"strings"
 
 	"github.com/PuerkitoBio/goquery"
@@ -16,36 +17,53 @@ type Sample struct {
 	Output string
 }
 
+var runCmd = map[string]string{
+	"go":   "go run main.go",
+	"node": "node index.js",
+	"bun":  "bun run index.ts",
+}
+
 func main() {
 	log.SetFlags(0)
-	args := os.Args[1:]
-	if len(args) != 2 {
-		log.Fatal(`usage: command <contest> <problem>
-   or: command -u <url>
-   or: command -n <number>`)
+	n := flag.Int("n", 0, "Number of problems")
+	rt := flag.String("rt", "go", "Runtime environment (go, bun, node)")
+	flag.Parse()
+
+	cmd, ok := runCmd[*rt]
+	if !ok {
+		log.Fatalf("error: unsupported runtime: %s", *rt)
 	}
 
-	var url string
-	switch args[0] {
-	case "-u":
-		if !strings.HasPrefix(args[1], "https://atcoder.jp") {
-			log.Fatal("error: URL must start with https://atcoder.jp")
+	if *n < 0 || *n > 10 {
+		log.Fatal("error: number of problems must be between 1 and 10")
+	}
+
+	var targetURL string
+	if *n == 0 {
+		args := flag.Args()
+		if len(args) != 1 {
+			log.Fatal("error: exactly one URL is required")
 		}
-		url = args[1]
-	case "-n":
-		url = ""
-	default:
-		contest := args[0]
-		problem := args[1]
-		if len(problem) != 1 {
-			log.Fatalf("error: problem must be single character (got %s)", problem)
+
+		u, err := url.Parse(args[0])
+		if err != nil {
+			log.Fatalf("error: invalid URL format: %v", err)
 		}
-		url = fmt.Sprintf("https://atcoder.jp/contests/%s/tasks/%s_%s", contest, contest, problem)
+
+		if u.Scheme != "http" && u.Scheme != "https" {
+			log.Fatalf("error: unsupported scheme %q (must be http or https)", u.Scheme)
+		}
+
+		if u.Hostname() != "atcoder.jp" {
+			log.Fatalf("error: invalid host %q (must be atcoder.jp)", u.Hostname())
+		}
+
+		targetURL = u.String()
 	}
 
 	var samples []Sample
-	if url != "" {
-		resp, err := http.Get(url)
+	if targetURL != "" {
+		resp, err := http.Get(targetURL)
 		if err != nil {
 			log.Fatalf("error: failed to fetch url (%v)", err)
 		}
@@ -78,14 +96,7 @@ func main() {
 			log.Fatal("error: no samples found (check contest/number or url)")
 		}
 	} else {
-		n, err := strconv.Atoi(args[1])
-		if err != nil {
-			log.Fatalf("error: -n requires a number (got: %s)", args[1])
-		}
-		if n < 1 {
-			log.Fatalf("error: number of samples must be at least 1 (got: %d)", n)
-		}
-		for range n {
+		for range *n {
 			samples = append(samples, Sample{
 				Input:  "",
 				Output: "",
@@ -115,11 +126,13 @@ func main() {
 		if err = os.WriteFile(fmt.Sprintf("%s/out.txt", dirPath), []byte(v.Output), 0644); err != nil {
 			log.Fatalf("error: failed to write out.txt (%v)", err)
 		}
+
 		shLines = append(shLines,
 			fmt.Sprintf("echo -n \"[Sample %d] \"", sampleNum),
-			fmt.Sprintf("go run main.go < ./samples/sample-%d/in.txt > ./samples/sample-%d/actual.txt 2>&1", sampleNum, sampleNum),
-			fmt.Sprintf("diff -Z ./samples/sample-%d/out.txt ./samples/sample-%d/actual.txt > /dev/null", sampleNum, sampleNum),
-			"if [ $? -eq 0 ]; then",
+			fmt.Sprintf("if ! %s < ./samples/sample-%d/in.txt > ./samples/sample-%d/actual.txt 2> ./samples/sample-%d/error.txt; then", cmd, sampleNum, sampleNum, sampleNum),
+			"  echo -e \"\\e[31m[RE]\\e[0m\"",
+			fmt.Sprintf("  cat ./samples/sample-%d/error.txt", sampleNum),
+			fmt.Sprintf("elif diff -Z ./samples/sample-%d/out.txt ./samples/sample-%d/actual.txt > /dev/null; then", sampleNum, sampleNum),
 			"  echo -e \"\\e[32m[AC]\\e[0m\"",
 			"else",
 			"  echo -e \"\\e[31m[WA]\\e[0m\"",
