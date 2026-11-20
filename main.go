@@ -35,7 +35,7 @@ func main() {
 	}
 
 	if *n < 0 || *n > 10 {
-		log.Fatal("error: number of problems must be between 1 and 10")
+		log.Fatal("error: number of problems must be 0 (url mode) or between 1 and 10")
 	}
 
 	var targetURL string
