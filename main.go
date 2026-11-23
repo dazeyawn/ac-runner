@@ -51,6 +51,6 @@ func main() {
 	if err = os.WriteFile(shPath, []byte(shContent), 0755); err != nil {
 		log.Fatalf("error: failed to create run_tests.sh (%v)", err)
 	}
-	fmt.Printf("\n%d samples(s) saved to %s/samples/\n", len(samples), wd)
+	fmt.Printf("\n%d sample(s) saved to %s/samples/\n", len(samples), wd)
 	fmt.Printf("Generated %s\n", shPath)
 }
