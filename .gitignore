@@ -1,6 +1,22 @@
-/dist/
-
+# Generated output files & scripts
 /samples/
-
 run_tests.sh
 
+# Build outputs & test artifacts
+/dist/
+*.exe
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+coverage.out
+
+# Environment variables
+.env*
+
+# Editor, IDE & OS metadata files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
