@@ -1,9 +1,10 @@
-module atcoder-tools
+module ac-runner
 
-go 1.27.0
+go 1.27.3
+
+require github.com/PuerkitoBio/goquery v1.14.0
 
 require (
-	github.com/PuerkitoBio/goquery v1.13.0 // indirect
-	github.com/andybalholm/cascadia v1.3.4 // indirect
-	golang.org/x/net v0.58.0 // indirect
+	github.com/andybalholm/cascadia v1.3.5 // indirect
+	golang.org/x/net v0.62.0 // indirect
 )
